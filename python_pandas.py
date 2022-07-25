@@ -1,23 +1,20 @@
-import json
-import pprint
 import time
+import pandas as pd
 import dask.dataframe as dd
-from sqlalchemy import distinct
 
 
 def getDistinctColVals(ddf):
-  colValsDict = {'distinctValues': list(ddf.nunique().compute())}
-  return json.dumps(colValsDict, indent = 4)
+  counts = []
+  for column in ddf.columns:
+    counts.append(ddf[column].nunique().compute())
+  return pd.Series(counts, index=ddf.columns).to_json()
 
 
 def getDataInJSON(ddf):
-  # numCols = {}
-  # for column in ddf.columns:
-  #   numCols[column] = list(ddf[column].values.compute())
-  # return json.dumps(numCols, indent = 4)
-  return json.dumps(json.loads(ddf.to_json(orient="records")))
+  return pd.DataFrame(data=ddf).to_json()
 
-
+def getOnlyNumCols(ddf):
+  ddf.apply(lambda s: pd.to_numeric(s, errors='coerce').notnull().all(), axis=1, meta=ddf)
 
 start = time.time()
 ddf = dd.read_csv("data.csv").persist()
@@ -25,8 +22,10 @@ ddf = dd.read_csv("data.csv").persist()
 end = time.time()
 
 # print(ddf.dtypes)
-print(getDataInJSON(ddf))
-print(getDistinctColVals(ddf))
+# print(getDataInJSON(ddf))
+# print(getDistinctColVals(ddf))
+print(getOnlyNumCols(ddf))
+
 # print(list(ddf["Lower_CI"].astype('str').str.isnumeric()))
 
 
